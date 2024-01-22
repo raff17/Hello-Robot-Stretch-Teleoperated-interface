@@ -1,3 +1,4 @@
+"Information"
 This is a Teleoperated interface system that connects to the gripper camera and an external camera on the Stretch RE2. 
 The interface works using PYQT5 and is used in conjuction with an iPad using a VNC system in order to transmit the signal from Stretch to the iPad.
 
