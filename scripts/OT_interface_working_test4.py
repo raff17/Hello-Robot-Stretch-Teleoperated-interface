@@ -602,7 +602,7 @@ class GripperButtonset(QWidget):
         self.left_button.setText("")
         icon = QtGui.QIcon()
 
-        icon.addPixmap(QtGui.QPixmap("/home/hello-robot/catkin_ws/src/joystick_commands/scripts/left.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap("/home/hello-robot/catkin_ws/src/joystick_commands/scripts/images/left.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.left_button.setIcon(icon)
         self.left_button.setIconSize(QtCore.QSize(300, 300))
         
@@ -611,7 +611,7 @@ class GripperButtonset(QWidget):
         self.right_button.setFont(self.fontD)
         self.right_button.setText("")
         icon1 = QtGui.QIcon()
-        icon1.addPixmap(QtGui.QPixmap("/home/hello-robot/catkin_ws/src/joystick_commands/scripts/right.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon1.addPixmap(QtGui.QPixmap("/home/hello-robot/catkin_ws/src/joystick_commands/scripts/images/right.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.right_button.setIcon(icon1)
         self.right_button.setIconSize(QtCore.QSize(300, 300))
 
@@ -650,7 +650,7 @@ class Buttonset(QWidget):
 
         icon3 = QtGui.QIcon()
 
-        icon3.addPixmap(QtGui.QPixmap("/home/hello-robot/catkin_ws/src/joystick_commands/scripts/open2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon3.addPixmap(QtGui.QPixmap("/home/hello-robot/catkin_ws/src/joystick_commands/scripts/images/open2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.up_button.setIcon(icon3)
         self.up_button.setIconSize(QtCore.QSize(200, 200))
         
@@ -660,7 +660,7 @@ class Buttonset(QWidget):
 
         icon2 = QtGui.QIcon()
 
-        icon2.addPixmap(QtGui.QPixmap("/home/hello-robot/catkin_ws/src/joystick_commands/scripts/close.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon2.addPixmap(QtGui.QPixmap("/home/hello-robot/catkin_ws/src/joystick_commands/scripts/images/close.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.down_button.setIcon(icon2)
         self.down_button.setIconSize(QtCore.QSize(200, 200))
 
