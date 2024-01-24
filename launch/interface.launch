@@ -1,0 +1,7 @@
+<launch>
+   <include file="$(find stretch_core)/launch/stretch_driver.launch"/>
+   <arg name="node_start_delay" default="5.0" />
+   <node pkg="rosservice" type="rosservice" name="nav" args="call /switch_to_navigation_mode" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/>
+   <node pkg="joystick_commands" type="callout.py" name="callout" output="screen" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' "/>
+   <node pkg="joystick_commands" type="OT_interface_working_test4.py" name="interface" output="screen"/>
+</launch>
