@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+"""
+Author: Rafael Morales Mayoral
+Institution: Oregon State University 
+About code: This code is used to teleoperate the Hello-Robot RE2. It uses PYQT5 to create an interface that can be control via computer OR can also be VNC to a advice (such as a tablet)
+"""
+
+#require imports
 import typing
 import rospy
 import sys
@@ -14,12 +21,12 @@ from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryG
 from trajectory_msgs.msg import JointTrajectoryPoint
 from geometry_msgs.msg import Twist
 from cv_bridge import CvBridge
+from threading import Thread
+import pygame
 
 #Sounds
 from playsound import playsound
 
-
-import threading
 
 #QT command 
 from PyQt5 import QtCore
@@ -30,30 +37,28 @@ sys.stdout = open(f"{os.path.dirname(os.path.abspath(__file__))}/logs/input_{tim
 
 
 class NavigationController():
-    '''This is used to control the base motion of stretch'''
+    '''This is used to control the base motion of stretch by detecting the desire movement and moving towards that direction. The polygon shapes are used for the seperation of action sections'''
     def __init__(self, forwards_scale = 1, backwards_scale = 1, left_scale = 1, right_scale = 1, parent=None):
         self.areas = [
             {
                 "geometry" : shapely.Polygon([(0, 0), (0.5, 0.5), (1, 0)]),
-                "callback" : self.go_forwards,
-                "mouseover": self.mouseover_forwards
+                "callback" : self.go_forwards
             },
             {
                 "geometry" : shapely.Polygon([(0, 1), (0.5, 0.5), (1, 1)]),
-                "callback" : self.go_backwards,
-                "mouseover": self.mouseover_backwards
+                "callback" : self.go_backwards
             },
             {
                 "geometry" : shapely.Polygon([(0, 0), (0.5, 0.5), (0, 1)]),
-                "callback" : self.turn_left,
-                "mouseover": self.mouseover_left
+                "callback" : self.turn_left
             },
             {
                 "geometry" : shapely.Polygon([(1, 0), (0.5, 0.5), (1, 1)]),
-                "callback" : self.turn_right,
-                "mouseover": self.mouseover_right
+                "callback" : self.turn_right
             }
         ]
+
+        # Timer for the movement sounds (in order for)
         self.timer_forward = 0
         self.timer_back = 0
         self.timer_left_turn = 0
@@ -62,31 +67,54 @@ class NavigationController():
         self.parent = parent
         self.move_publisher = rospy.Publisher("/stretch/cmd_vel", Twist, queue_size=5)
 
+        # TODO: get the mouse function working in order to allow for a single press movement instead of constant clicks.
     def mouseover_event(self, event):
         return
-        """dimensions = self.parent.image_frame.frameGeometry()
-        norm_x = event.x() / dimensions.width()
-        norm_y = event.y() / dimensions.height()
 
-        point = shapely.Point((norm_x, norm_y))
-
-        for area in self.areas:
-            if area["geometry"].contains(point):
-                area["mouseover"]()"""
 
     def click_event(self, event):
+        '''Detects when the mouse clicks on the screen'''
         dimensions = self.parent.image_frame.frameGeometry()
         norm_x = event.x() / dimensions.width()
         norm_y = event.y() / dimensions.height()
-
         point = shapely.Point((norm_x, norm_y))
-
         for area in self.areas:
             if area["geometry"].contains(point):
                 area["callback"]()
         
 
+    # def click_event(self, event):
+    #     dimensions = self.parent.image_frame.frameGeometry()
+    #     norm_x = event.x() / dimensions.width()
+    #     norm_y = event.y() / dimensions.height()
+    #     point = shapely.Point((norm_x, norm_y))
+
+    #     for area in self.areas:
+    #         while area["geometry"].contains(point):
+    #             area["callback"]()
+    #             point = 0
+
+        
+    # Thread(target=click_event).start()
+                
+
+    def stop(self):
+        '''Stop command'''
+        msg = Twist()
+        msg.linear.x = 0
+        msg.linear.y = 0
+        msg.linear.z = 0
+        msg.angular.x = 0
+        msg.angular.y = 0
+        msg.angular.z = 0
+        self.move_publisher.publish(msg)
+        time.sleep(0.20)
+        msg.linear.x = 0
+        self.move_publisher.publish(msg)
+
+        
     def go_forwards(self):
+        '''Forward command'''
         msg = Twist()
         msg.linear.x = 2
         msg.linear.y = 0
@@ -99,6 +127,7 @@ class NavigationController():
         msg.linear.x = 0
         self.move_publisher.publish(msg)
 
+        # section that allows for sound to play without making it too repetitive 
         while self.timer_forward < .1:
             self.timer_forward += .1
             self.forward_sound()
@@ -113,6 +142,7 @@ class NavigationController():
 
 
     def go_backwards(self):
+        '''Backwards command'''
         msg = Twist()
         msg.linear.x = -2
         msg.linear.y = 0
@@ -125,6 +155,7 @@ class NavigationController():
         msg.linear.x = 0
         self.move_publisher.publish(msg)
 
+        # section that allows for sound to play without making it too repetitive 
         while self.timer_back < .1:
             self.timer_back += .1
             self.backwards_sound()
@@ -138,6 +169,7 @@ class NavigationController():
         print("move_backwards")    
 
     def turn_left(self):
+        '''Turn left command'''
         msg = Twist()
         msg.linear.x = 0
         msg.linear.y = 0
@@ -150,6 +182,7 @@ class NavigationController():
         msg.angular.z = 0
         self.move_publisher.publish(msg)
 
+        # section that allows for sound to play without making it too repetitive 
         while self.timer_left_turn < .1:
             self.timer_left_turn += .1
             self.left_sound()
@@ -163,6 +196,7 @@ class NavigationController():
         print("move_left")        
 
     def turn_right(self):
+        '''Turn right command'''
         msg = Twist()
         msg.linear.x = 0
         msg.linear.y = 0
@@ -175,6 +209,7 @@ class NavigationController():
         msg.angular.z = 0
         self.move_publisher.publish(msg)
 
+        # section that allows for sound to play without making it too repetitive 
         while self.timer_right_turn < .1:
             self.timer_right_turn += .1
             self.right_sound()
@@ -187,18 +222,7 @@ class NavigationController():
 
         print("move_right")        
 
-    def mouseover_forwards(self):
-        print("Mouseover forwards")
-    
-    def mouseover_backwards(self):
-        print("Mouseover backwards")
-    
-    def mouseover_left(self):
-        print("Mouseover left")
-    
-    def mouseover_right(self):
-        print("Mouseover right")
-
+    # Sound commands
     def forward_sound(self):
         playsound('/home/hello-robot/catkin_ws/src/joystick_commands/scripts/sounds/forward.mp3')
 
@@ -210,7 +234,6 @@ class NavigationController():
 
     def right_sound(self):
         playsound('/home/hello-robot/catkin_ws/src/joystick_commands/scripts/sounds/right_turn.mp3')
-
 
 class ArmController():
     '''Controls for the arm! (NOT GRIPPER)'''
@@ -260,6 +283,7 @@ class ArmController():
         pass
 
     def click_event(self, event):
+        '''Detects when the mouse clicks on the screen'''
         dimensions = self.parent.image_frame.frameGeometry()
         norm_x = event.x() / dimensions.width()
         norm_y = event.y() / dimensions.height()
@@ -272,9 +296,11 @@ class ArmController():
         
 
     def move_up(self):
+        '''Arm move up command'''
         command = {'joint': 'joint_lift', 'delta': self.delt_vert}
         self.send_command(command)
 
+        # section that allows for sound to play without making it too repetitive 
         while self.timer_up < .1:
             self.timer_up += .1
             self.up_sound()
@@ -288,9 +314,11 @@ class ArmController():
         print("arm_move_up")
 
     def move_down(self):
+        '''Arm move down command'''
         command = {'joint': 'joint_lift', 'delta': -self.delt_vert}
         self.send_command(command)
 
+        # section that allows for sound to play without making it too repetitive 
         while self.timer_down < .1:
             self.timer_down += .1
             self.down_sound()
@@ -304,9 +332,11 @@ class ArmController():
         print("arm_move_down")
 
     def extend(self):
+        '''Arm extend command'''
         command = {'joint': ['joint_arm_l0','joint_arm_l1', 'joint_arm_l2', 'joint_arm_l3'], 'delta': -self.delt_horiz}
         self.send_arm_command(command)
 
+        # section that allows for sound to play without making it too repetitive 
         while self.timer_out < .1:
             self.timer_out += .1
             self.in_sound()
@@ -320,9 +350,11 @@ class ArmController():
         print("arm_move_extend")
 
     def retract(self):
+        '''Arm retract command'''
         command = {'joint': ['joint_arm_l0','joint_arm_l1', 'joint_arm_l2', 'joint_arm_l3'], 'delta': self.delt_horiz}
         self.send_arm_command(command)
 
+        # section that allows for sound to play without making it too repetitive 
         while self.timer_in < .1:
             self.timer_in += .1
             self.out_sound()
@@ -382,18 +414,8 @@ class ArmController():
             logging.error("Error: Exception encountered while passing command {command} to camera controls")
             logging.error(ex)
 
-    def mouseover_forwards(self):
-        print("Mouseover forwards")
-    
-    def mouseover_backwards(self):
-        print("Mouseover backwards")
-    
-    def mouseover_left(self):
-        print("Mouseover left")
-    
-    def mouseover_right(self):
-        print("Mouseover right")
 
+    # Sound commands
     def in_sound(self):
         playsound('/home/hello-robot/catkin_ws/src/joystick_commands/scripts/sounds/arm_in.mp3')
 
@@ -428,6 +450,7 @@ class GripperController():
                     "callback" : self.turn_right
                 }
             ]
+        # starting positions
         self.timer_close = 0
         self.timer_open = 0
         self.timer_left = 0
@@ -460,9 +483,11 @@ class GripperController():
         
 
     def open_gripper(self):
+        """open gripper command"""
         command = {'joint': 'joint_gripper_finger_left', 'delta': self.grip_factor}
         self.send_command(command)
 
+        # section that allows for sound to play without making it too repetitive 
         while self.timer_open < .1:
             self.timer_open += .1
             self.open_sound()
@@ -476,9 +501,11 @@ class GripperController():
         print("open_gripper")
 
     def close_gripper(self):
+        """Close gripper command"""
         command = {'joint': 'joint_gripper_finger_left', 'delta': -self.grip_factor}
         self.send_command(command)
 
+        # section that allows for sound to play without making it too repetitive 
         while self.timer_close < .1:
             self.timer_close += .1
             self.close_sound()
@@ -494,9 +521,11 @@ class GripperController():
 
 
     def turn_left(self):
+        """turn gripper to the left"""
         command = {'joint': 'joint_wrist_yaw', 'delta': self.yaw_factor}
         self.send_command(command)
 
+        # section that allows for sound to play without making it too repetitive 
         while self.timer_left < .1:
             self.timer_left += .1
             self.gripper_left_sound()
@@ -511,9 +540,11 @@ class GripperController():
 
 
     def turn_right(self):
+        """Turn gripper to the right"""
         command = {'joint': 'joint_wrist_yaw', 'delta': -self.yaw_factor}
         self.send_command(command)
 
+        # section that allows for sound to play without making it too repetitive 
         while self.timer_right < .1:
             self.timer_right += .1
             self.gripper_right_sound()
@@ -550,18 +581,8 @@ class GripperController():
             logging.error(ex)
         
 
-    def mouseover_forwards(self):
-        print("Mouseover forwards")
-    
-    def mouseover_backwards(self):
-        print("Mouseover backwards")
-    
-    def mouseover_left(self):
-        print("Mouseover left")
-    
-    def mouseover_right(self):
-        print("Mouseover right")
 
+    # Sound commands
     def close_sound(self):
         playsound('/home/hello-robot/catkin_ws/src/joystick_commands/scripts/sounds/close.mp3')
 
@@ -600,6 +621,7 @@ class GripperButtonset(QWidget):
         self.fontD.setPointSize(self.pointSize)
         self.left_button.setFont(self.fontD) 
         self.left_button.setText("")
+        # using icon allows use to implement images 
         icon = QtGui.QIcon()
 
         icon.addPixmap(QtGui.QPixmap("/home/hello-robot/catkin_ws/src/joystick_commands/scripts/images/left.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
@@ -610,6 +632,7 @@ class GripperButtonset(QWidget):
         self.right_button = SquareButton(parent=self)
         self.right_button.setFont(self.fontD)
         self.right_button.setText("")
+        # using icon allows use to implement images 
         icon1 = QtGui.QIcon()
         icon1.addPixmap(QtGui.QPixmap("/home/hello-robot/catkin_ws/src/joystick_commands/scripts/images/right.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.right_button.setIcon(icon1)
@@ -618,7 +641,7 @@ class GripperButtonset(QWidget):
         self.left_button.clicked.connect(self.controller.turn_left)
         self.right_button.clicked.connect(self.controller.turn_right)
 
-        #This part takes the button creation and made them to QT interface
+        #This part takes the button you created and add them to QT interface
         self.main_layout = QVBoxLayout()
         self.middle_widget = QWidget()
         self.middle_layout = QHBoxLayout()
@@ -633,7 +656,6 @@ class GripperButtonset(QWidget):
 
         self.setLayout(self.main_layout)
         self.setFixedSize(900, 200)
-        # self.setFixedSize(1200,130)
 
 class Buttonset(QWidget):
     '''Assigns the buttons you made to specific actions (gripper movement)'''
@@ -648,8 +670,8 @@ class Buttonset(QWidget):
         self.up_button.setFont(self.fontD)
         self.up_button.setText("")
 
+        # using icon allows use to implement images 
         icon3 = QtGui.QIcon()
-
         icon3.addPixmap(QtGui.QPixmap("/home/hello-robot/catkin_ws/src/joystick_commands/scripts/images/open2.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.up_button.setIcon(icon3)
         self.up_button.setIconSize(QtCore.QSize(200, 200))
@@ -658,8 +680,8 @@ class Buttonset(QWidget):
         self.down_button.setFont(self.fontD)
         self.down_button.setText("")
 
+        # using icon allows use to implement images 
         icon2 = QtGui.QIcon()
-
         icon2.addPixmap(QtGui.QPixmap("/home/hello-robot/catkin_ws/src/joystick_commands/scripts/images/close.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.down_button.setIcon(icon2)
         self.down_button.setIconSize(QtCore.QSize(200, 200))
@@ -686,10 +708,9 @@ class Buttonset(QWidget):
         self.setFixedSize(750, 200)
 
 class DisplayImageWidget(QWidget):
+    """allows images(camera feedback) to be added to the correct main display section"""
     def __init__(self, parent=None):
         super(DisplayImageWidget, self).__init__(parent)
-
-        #self.button = QPushButton('Show picture')
         self.image_frame = QLabel()
         self.image_frame.setFixedSize(432, 768)
 
@@ -761,6 +782,7 @@ class DisplayImageWidget(QWidget):
 ################################################################################################################
 
     def draw_shapes(self, cv_image):
+        """uses the dimensions of the camera layout to draw triangles on the images to divide the sections"""
         overlay = cv_image.copy()
         alpha = 0.5
         dimensions = self.image_frame.size()
@@ -785,7 +807,7 @@ class DisplayImageWidget(QWidget):
 
 
 class ManipulationPage(QWidget):
-    '''Creates a page call Manipulation and display specific information there'''
+    '''Creates a page call Manipulation and display all previous information such as images, and places them in the correct location'''
     condition = input("")
     print("Session data: " + condition)
     def __init__(self):
@@ -796,7 +818,7 @@ class ManipulationPage(QWidget):
 
         self.arm_widget = QWidget()
         self.arm_layout = QHBoxLayout()
-
+        """Adding labels"""
         self.arm_camera_widget = QWidget()
         icon6 = QtGui.QIcon()
         icon6.addPixmap(QtGui.QPixmap("back3.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
@@ -814,13 +836,11 @@ class ManipulationPage(QWidget):
         self.labelmove.setPixmap(QtGui.QPixmap("back3.png"))
         self.labelmove.setScaledContents(True)
 
-        # self.labelmove.setObjectName("label")
-        # changing this is will change what the clicking on the camera actually does
-        #This should be arm movement
         # This controls the size of the image shown and what is connected to the clicking for that image
         self.arm_camera = DisplayImageWidget(parent=self)
         self.arm_camera.image_frame.setFixedSize(800, 700)
-        #This area is what connect the camera to the position "gripper" will open up the camera that is name in gripper
+
+        # This area is what connect the camera to the position "gripper" will open up the camera that is name in gripper
         self.arm_camera.available_modes["arm"] = {"show_function" : self.arm_camera.show_navigation, "controller" : NavigationController(parent=self.arm_camera)}
         self.arm_camera.set_mode("arm")
 
@@ -844,7 +864,7 @@ class ManipulationPage(QWidget):
         self.arm_cam_thread.start()
 
         #####################################################################
-        #Armmotion/gripper camera view
+        # Arm motion/gripper camera view
         self.gripper_widget = QWidget()
         self.gripper_layout = QHBoxLayout()
 
@@ -864,16 +884,17 @@ class ManipulationPage(QWidget):
 
         self.gripper_camera = DisplayImageWidget(parent=self)
         self.gripper_camera.image_frame.setFixedSize(800, 700)
-        #This area is what connect the camera to the position "gripper" will open up the camera that is name in gripper
+        
+        # This area is what connect the camera to the position "gripper" will open up the camera that is name in gripper
         self.gripper_camera.available_modes["gripper"] = {"show_function" : self.gripper_camera.show_navigation, "controller" : ArmController(parent=self.gripper_camera)}
         self.gripper_camera.set_mode("gripper")
         self.gripper_camera_layout = QVBoxLayout()
         self.gripper_camera_layout.addWidget(self.gripper_camera_label)
+        
         # self.gripper_camera_layout.addWidget(self.direction_camera_label)
         self.gripper_camera_layout.addWidget(self.gripper_camera)
 
         # self.gripper_camera_layout.addWidget(self.direction_label)
-
         self.gripper_camera_layout.setAlignment(self.direction_label, Qt.AlignCenter)
         self.gripper_camera_layout.setAlignment(self.direction_camera_label, Qt.AlignCenter)
         self.cam_buttonss = Buttonset(parent=self)
@@ -882,15 +903,11 @@ class ManipulationPage(QWidget):
         self.gripper_camera_layout.addWidget(self.cam_buttonss)
         self.gripper_camera_layout.setAlignment(self.gripper_camera_label, Qt.AlignCenter)
 
-
-
         self.gripper_camera_widget.setLayout(self.gripper_camera_layout)
         self.gripper_camera_layout.setAlignment(self.cam_buttonss, Qt.AlignCenter)
 
         self.gripper_cam_thread = threading.Thread(target=self.main_camera_cb, daemon=True)
         self.gripper_cam_thread.start()
-
-# possibly change ----------------------------------------------------------------
 
         self.arm_layout.addWidget(self.arm_camera_widget)
         self.arm_layout.addWidget(self.gripper_camera_widget)
@@ -906,10 +923,11 @@ class ManipulationPage(QWidget):
         self.setLayout(self.layout)
 
 
-        #######################################################################         
-    # Adding things selects the camera  
+#######################################################################         
+# Detecting cameras
     # camera for gripper       
     def main_camera_cb(self):
+        """detects camera in port 8 (which is the gripper camera)"""
         vid = cv2.VideoCapture(8)
         while(True):
             # Capture the video frame
@@ -917,8 +935,9 @@ class ManipulationPage(QWidget):
             _, frame = vid.read()
             self.gripper_camera.show_image_by_mode(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
 #####################################################################
-# Camera for movement (webcam)
+    # Camera for movement (webcam)
     def run_arm_camera(self):
+        """detects camera in port 6 (webcam camera that is connected on the usb port near the speakers)"""
         vid = cv2.VideoCapture(6)
         while(True):
             # Capture the video frame
